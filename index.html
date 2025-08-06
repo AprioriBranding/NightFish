@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Haramara Fish Animation</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #593D55;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <script>
+    let fish = [];
+    let numFish = 300;
+    let currentAngle = 0;
+
+    let bgColor;
+    let fishColor;
+
+    function setup() {
+      createCanvas(windowWidth, windowHeight);
+      bgColor = color("#593D55");
+      fishColor = "#6BF2D7";
+
+      for (let i = 0; i < numFish; i++) {
+        let angle = random(TWO_PI);
+        let radius = random(30, 100);
+        let x = width / 2 + cos(angle) * radius;
+        let y = height / 2 + sin(angle) * radius;
+        fish.push(new Fish(x, y));
+      }
+
+      background(bgColor);
+    }
+
+    function draw() {
+      fill(red(bgColor), green(bgColor), blue(bgColor), 30);
+      noStroke();
+      rect(0, 0, width, height);
+
+      currentAngle += 2;
+      let current = p5.Vector.fromAngle(currentAngle).mult(0.02);
+
+      for (let f of fish) {
+        f.avoidOthers(fish);
+        f.swim(current);
+        f.display();
+      }
+    }
+
+    class Fish {
+      constructor(x, y) {
+        this.pos = createVector(x, y);
+        this.vel = p5.Vector.random2D().mult(random(0.5, 1));
+        this.size = 5;
+        this.opacity = 220;
+      }
+
+      avoidOthers(others) {
+        let steer = createVector();
+        let count = 0;
+
+        for (let other of others) {
+          let d = dist(this.pos.x, this.pos.y, other.pos.x, other.pos.y);
+          if (other !== this && d < 10) {
+            let diff = p5.Vector.sub(this.pos, other.pos);
+            diff.div(d);
+            steer.add(diff);
+            count++;
+          }
+        }
+
+        if (count > 0) {
+          steer.div(count);
+          steer.setMag(0.2);
+          this.vel.add(steer);
+        }
+      }
+
+      swim(current) {
+        let target = createVector(mouseX, mouseY);
+        let toMouse = p5.Vector.sub(target, this.pos);
+        let d = toMouse.mag();
+
+        if (d < 50) {
+          let repel = p5.Vector.sub(this.pos, target);
+          repel.setMag(map(d, 0, 50, 0.5, 0));
+          this.vel.add(repel);
+        } else {
+          toMouse.rotate(random(-0.02, 0.02));
+          toMouse.setMag(0.03);
+          this.vel.add(toMouse);
+        }
+
+        this.vel.add(current);
+        this.vel.limit(1.5);
+        this.vel.mult(0.985);
+        this.pos.add(this.vel);
+      }
+
+      display() {
+        push();
+        translate(this.pos.x, this.pos.y);
+        rotate(this.vel.heading());
+
+        let speed = this.vel.mag();
+        let scale = map(speed, 0, 1.5, 0.3, 1);
+
+        noStroke();
+        fill(color(fishColor + hex(this.opacity, 2)));
+        ellipse(0, 0, this.size * 2 * scale, this.size * scale);
+        pop();
+      }
+    }
+  </script>
+</body>
+</html>
